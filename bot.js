@@ -59,6 +59,7 @@ steamClient.on('logOnResponse', function(logonResp) {
                 sessionID: sessionID,
                 webCookie: newCookie
             }, function(err, APIKey) {
+                if (err) throw err;
                 offers.setup({
                     sessionID: sessionID,
                     webCookie: newCookie,
@@ -85,6 +86,7 @@ steamUser.on('tradeOffers', function(number) {
             active_only: 1,
             time_historical_cutoff: Math.round(Date.now() / 1000)
         }, function(err, body) {
+            if (err) throw err;
             if (body.response.trade_offers_received) {
                 body.response.trade_offers_received.forEach(function(offer) {
                     if (offer.trade_offer_state == 2) {
