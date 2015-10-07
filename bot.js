@@ -14,6 +14,14 @@ var logOnOptions = {
 
 var authCode = ''; // code received by email
 
+var db_config = {
+    host     : '', // mysql host
+    user     : '', // mysql username
+    password : '', // mysql password
+    database : '', // mysql database
+    connectTimeout: 0
+};
+
 try {
     logOnOptions['sha_sentryfile'] = getSHA1(fs.readFileSync('sentry'));
 } catch (e) {
@@ -32,15 +40,34 @@ var steamFriends  = new Steam.SteamFriends(steamClient);
 var steamWebLogOn = new SteamWebLogOn(steamClient, steamUser);
 var offers        = new SteamTradeOffers();
 
-var connection = mysql.createConnection({
-    host     : '', // mysql host
-    user     : '', // mysql username
-    password : '', // mysql password
-    database : '', // mysql database
-    connectTimeout: 0
-});
+var connection;
 
-connection.connect();
+function initSQL() {
+    connection = mysql.createConnection(db_config);
+
+    connection.connect(function(err) {
+        if (err) {
+            setTimeout(initSQL, 2000);
+        } else {
+            console.log('Connected to MySQL.');
+        }
+    });
+
+    connection.on('error', function(err) {
+        console.log('MySQL error: ' + err);
+        if (err.code === 'PROTOCOL_CONNECTION_LOST') {
+            initSQL();
+        } else {
+            throw err;
+        }
+    });
+    
+    setInterval(function() {
+        connection.query('SELECT 1');
+    }, 5000);
+}
+
+initSQL();
 
 steamClient.connect(); // connect to the Steam network
 steamClient.on('connected', function() {
