@@ -43,7 +43,6 @@ steamClient.on('connected', function() {
 steamClient.on('logOnResponse', function(logonResp) {
     if (logonResp.eresult == Steam.EResult.OK) {
         console.log('Logged in!');
-        socket.emit('donation', { 'steamid': '777', 'items': 5 });
         steamFriends.setPersonaState(Steam.EPersonaState.Online); // set status to 'Online'
         steamFriends.setPersonaName('Choops 2'); // change name
 
