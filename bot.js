@@ -1,6 +1,6 @@
 var fs     = require('fs');
 var crypto = require('crypto');
-var mysql  = require('mysql');
+var socket = require('socket.io-client')('http://localhost:3333');
 
 var Steam            = require('steam');
 var SteamWebLogOn    = require('steam-weblogon');
@@ -13,14 +13,6 @@ var logOnOptions = {
 };
 
 var keys = {};
-
-var db_config = {
-    host     : '', // mysql host
-    user     : '', // mysql username
-    password : '', // mysql password
-    database : '', // mysql database
-    connectTimeout: 0
-};
 
 if (fs.existsSync(logOnOptions.account_name + '.2fa')) {
     keys = JSON.parse(fs.readFileSync(logOnOptions.account_name + '.2fa'));
@@ -40,35 +32,6 @@ var steamUser     = new Steam.SteamUser(steamClient);
 var steamFriends  = new Steam.SteamFriends(steamClient);
 var steamWebLogOn = new SteamWebLogOn(steamClient, steamUser);
 var offers        = new SteamTradeOffers();
-
-var connection;
-
-function initSQL() {
-    connection = mysql.createConnection(db_config);
-
-    connection.connect(function(err) {
-        if (err) {
-            setTimeout(initSQL, 2000);
-        } else {
-            console.log('Connected to MySQL.');
-        }
-    });
-
-    connection.on('error', function(err) {
-        console.log('MySQL error: ' + err);
-        if (err.code === 'PROTOCOL_CONNECTION_LOST') {
-            initSQL();
-        } else {
-            throw err;
-        }
-    });
-    
-    setInterval(function() {
-        connection.query('SELECT 1');
-    }, 5000);
-}
-
-initSQL();
 
 steamClient.connect(); // connect to the Steam network
 steamClient.on('connected', function() {
@@ -102,11 +65,6 @@ steamClient.on('servers', function(servers) {
     fs.writeFile('servers', JSON.stringify(servers));
 });
 
-steamUser.on('updateMachineAuth', function(sentry, callback) {
-    fs.writeFileSync('sentry', sentry.bytes);
-    callback({ sha_file: getSHA1(sentry.bytes) });
-});
-
 steamUser.on('tradeOffers', function(number) {
     if (number > 0) {
         offers.getOffers({
@@ -119,13 +77,11 @@ steamUser.on('tradeOffers', function(number) {
                 body.response.trade_offers_received.forEach(function(offer) {
                     if (offer.trade_offer_state == 2) {
                         var amount = 0;
-                        if (offer.items_to_give == undefined) {
+                        if (offer.items_to_give === undefined) {
                             offers.acceptOffer({tradeOfferId: offer.tradeofferid});
                             console.log("> Accepting offer sent from " + offer.steamid_other);
-                            offer.items_to_receive.forEach(function(current, index, array) {
-                                amount++;
-                            });
-                            postToSQL("INSERT INTO donations (sid, amount) VALUES (" + offer.steamid_other + ", " + amount + ")");
+                            
+                            socket.emit('donation', { 'items': offer.items_to_receive });
                         } else {
                             console.log("> Declining offer sent from " + offer.steamid_other + " - item_to_give is not null");
                             offers.declineOffer({tradeOfferId: offer.tradeofferid});
@@ -136,15 +92,3 @@ steamUser.on('tradeOffers', function(number) {
         });
     }
 });
-
-function postToSQL(statement) {
-    connection.query(statement, function(err) { 
-        if (err) throw err; 
-    });
-}
-
-function getSHA1(bytes) {
-    var shasum = crypto.createHash('sha1');
-    shasum.end(bytes);
-    return shasum.read();
-}
