@@ -1,11 +1,12 @@
 var fs     = require('fs');
 var crypto = require('crypto');
-var socket = require('socket.io-client')('http://localhost:3333');
+var socket = require('socket.io-client')('http://localhost:8080');
 
 var Steam            = require('steam');
 var SteamWebLogOn    = require('steam-weblogon');
 var getSteamAPIKey   = require('steam-web-api-key');
 var SteamTradeOffers = require('steam-tradeoffers');
+var SteamTotp        = require('steam-totp');
 
 var logOnOptions = {
     account_name: '', // your login name
@@ -42,6 +43,7 @@ steamClient.on('connected', function() {
 steamClient.on('logOnResponse', function(logonResp) {
     if (logonResp.eresult == Steam.EResult.OK) {
         console.log('Logged in!');
+        socket.emit('donation', { 'steamid': '777', 'items': 5 });
         steamFriends.setPersonaState(Steam.EPersonaState.Online); // set status to 'Online'
         steamFriends.setPersonaName('Choops 2'); // change name
 
