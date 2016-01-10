@@ -12,7 +12,7 @@ var logOnOptions = {
     password: '' // your login password
 };
 
-var authCode = ''; // code received by email
+var keys = {};
 
 var db_config = {
     host     : '', // mysql host
@@ -22,13 +22,14 @@ var db_config = {
     connectTimeout: 0
 };
 
-try {
-    logOnOptions['sha_sentryfile'] = getSHA1(fs.readFileSync('sentry'));
-} catch (e) {
-    if (authCode != '') {
-        logOnOptions['auth_code'] = authCode;
-    }
+if (fs.existsSync(logOnOptions.account_name + '.2fa')) {
+    keys = JSON.parse(fs.readFileSync(logOnOptions.account_name + '.2fa'));
+} else {
+    console.log('[Error: No 2FA file found: ' + logOnOptions.account_name + '.2fa]');
 }
+
+logOnOptions['two_factor_code'] = SteamTotp.generateAuthCode(keys.shared_secret);
+console.log("Using code: " + logOnOptions['two_factor_code']);
 
 if (fs.existsSync('servers')) {
     Steam.servers = JSON.parse(fs.readFileSync('servers'));
