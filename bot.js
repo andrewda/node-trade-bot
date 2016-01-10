@@ -81,7 +81,7 @@ steamUser.on('tradeOffers', function(number) {
                             offers.acceptOffer({tradeOfferId: offer.tradeofferid});
                             console.log("> Accepting offer sent from " + offer.steamid_other);
                             
-                            socket.emit('donation', { 'items': offer.items_to_receive });
+                            socket.emit('donation', { 'steamid': offer.steamid_other, 'items': offer.items_to_receive });
                         } else {
                             console.log("> Declining offer sent from " + offer.steamid_other + " - item_to_give is not null");
                             offers.declineOffer({tradeOfferId: offer.tradeofferid});
